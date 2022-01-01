@@ -1,5 +1,5 @@
 import RGBColor from "./RGBColor";
-import debounce from "lodash.debounce";
+import throttle from "lodash.throttle";
 import "./style.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -32,35 +32,27 @@ const BRIGHTNESS_CHARACTERISTIC_UUID: BluetoothCharacteristicUUID =
 })();
 
 connectBtn.onclick = async () => {
-  const onColorChange = debounce(
-    async (e: Event) => {
-      if (e.target instanceof HTMLInputElement) {
-        console.log("C:", e.target.value);
-        await colorCharacteristic?.writeValue(
-          RGBColor.fromHex(e.target.value).toDataView()
-        );
-      }
-    },
-    100,
-    { trailing: true }
-  );
-  const onBrightnessChange = debounce(
-    async (e: Event) => {
-      if (e.target instanceof HTMLInputElement) {
-        console.log("B:", e.target.value);
-        const newBrightness = new DataView(new ArrayBuffer(2));
-        newBrightness.setUint16(0, e.target.valueAsNumber, true);
-        await brightnessCharacteristic?.writeValue(newBrightness);
-      }
-    },
-    75,
-    { trailing: true }
-  );
+  const onColorChange = throttle(async (e: Event) => {
+    if (e.target instanceof HTMLInputElement) {
+      console.log("C:", e.target.value);
+      await colorCharacteristic?.writeValue(
+        RGBColor.fromHex(e.target.value).toDataView()
+      );
+    }
+  }, 125);
+  const onBrightnessChange = throttle(async (e: Event) => {
+    if (e.target instanceof HTMLInputElement) {
+      console.log("B:", e.target.value);
+      const newBrightness = new DataView(new ArrayBuffer(2));
+      newBrightness.setUint16(0, e.target.valueAsNumber, true);
+      await brightnessCharacteristic?.writeValue(newBrightness);
+    }
+  }, 125);
 
-  colorInput.removeEventListener("change", onColorChange);
+  colorInput.removeEventListener("input", onColorChange);
   brightnessInput.removeEventListener("input", onBrightnessChange);
 
-  colorInput.addEventListener("change", onColorChange);
+  colorInput.addEventListener("input", onColorChange);
   brightnessInput.addEventListener("input", onBrightnessChange);
 
   const device = await navigator.bluetooth.requestDevice({
